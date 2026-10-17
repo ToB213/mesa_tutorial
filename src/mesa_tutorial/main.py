@@ -51,5 +51,5 @@ if __name__ == "__main__":
     plt.xlabel("Wealth")
     plt.ylabel("Probability")
 
-    plt.savefig("wealth_distribution_100.png")
+    plt.savefig("figs/wealth_distribution.png")
     plt.close()
