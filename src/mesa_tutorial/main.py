@@ -13,7 +13,7 @@ class MoneyAgent(mesa.Agent):
             self.wealth -= 1
 
 class MoneyModel(mesa.Model):
-    def __init__(self, seed: float | None = None, n: int = 10):
+    def __init__(self, seed: int | None = None, n: int = 10):
         super().__init__(seed=seed)
 
         MoneyAgent.create_agents(self, n)
@@ -34,10 +34,10 @@ if __name__ == "__main__":
         for _ in range(step):
             model.step()
 
-            for agent in model.agents:
-                all_wealth.append(agent.wealth)
-
             assert sum(agent.wealth for agent in model.agents) == n
+
+        for agent in model.agents:
+            all_wealth.append(agent.wealth)
 
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     plt.title(f"Wealth Distribution of {n} Agents after {step} Steps over {run} Runs")
     plt.xlabel("Wealth")
-    plt.ylabel("Number of Agents")
+    plt.ylabel("Probability")
 
     plt.savefig("wealth_distribution_100.png")
     plt.close()
