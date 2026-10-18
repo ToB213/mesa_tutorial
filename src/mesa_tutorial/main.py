@@ -9,7 +9,7 @@ class MoneyAgent(mesa.Agent):
 
     def exchange(self):
         if self.wealth > 0:
-            other_agent = self.random.choice(list(self.model.agents))
+            other_agent = self.random.choice(self.model.agents)
 
             other_agent.wealth += 1
             self.wealth -= 1
