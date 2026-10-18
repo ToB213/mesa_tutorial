@@ -30,6 +30,14 @@ class MoneyModel(mesa.Model):
         self.agents.shuffle_do("exchange")
 
 if __name__ == "__main__":
+    def wealth_group(agent):
+        if agent.wealth == 0:
+            return "Poor"
+        elif agent.wealth <= 2:
+            return "Middle"
+        else:
+            return "Rich"
+
     n = 100
     step = 50
     seed = 42
@@ -38,28 +46,23 @@ if __name__ == "__main__":
 
     for _ in range(step):
         model.step()
-        assert model.agents.agg("wealth", sum) == n
+        assert model.agents.agg("wealth", np.sum) == n
 
-        poor_agents = model.agents.select(
-            lambda agent: agent.wealth == 0
-        )
+        groups = model.agents.groupby("ethnicity")
 
-        blue_agents = model.agents.select(
-            lambda agent: agent.ethnicity == "Blue"
-        )
+        for ethnicity, agents in groups:
+            print(
+                f"{ethnicity}, "
+                f"N: {len(agents)}, "
+                f"Average wealth: {agents.agg('wealth', np.mean):.2f}, "
+                f"Poor agents: {len(agents.select(lambda agent: agent.wealth == 0))}"
+            )
 
-        blue_average_wealth = blue_agents.agg("wealth", np.mean)
-
-        max_wealth = model.agents.agg("wealth", np.max)
-
-        rich_green_agents = len(model.agents.select(
-            lambda agent: agent.ethnicity == "Green" and agent.wealth >= 3
-        ))
-
+        cuont_wealth_group = model.agents.groupby(wealth_group).count()
         print(
-            f"Step: {_+1}, "
-            f"Poor agents: {len(poor_agents)}, "
-            f"Blue average wealth: {blue_average_wealth:.2f}, "
-            f"Max wealth: {max_wealth}, "
-            f"Rich green agents: {rich_green_agents}"
+            f"Poor: {cuont_wealth_group.get('Poor')}, "
+            f"Middle: {cuont_wealth_group.get('Middle')}, "
+            f"Rich: {cuont_wealth_group.get('Rich')}"
         )
+
+        assert sum(model.agents.groupby('ethnicity').agg('wealth', np.sum).values()) == n
