@@ -14,18 +14,23 @@ def run_experiment(
     steps: int,
     seed: int,
     redistribution: bool,
+    activation: str = "random"
 ):
     model = MoneyModel(
         n=n,
         seed=seed,
-        activation="random",
+        activation=activation,
         redistribution=redistribution,
     )
 
     for _ in range(steps):
         model.step()
 
-        assert model.agents.agg("wealth", sum) == n
+        wealth = model.agents.get("wealth")
+
+        assert len(wealth) == n
+        assert sum(wealth) == n
+        assert all(w >= 0 for w in wealth)
 
     wealth = model.agents.get("wealth")
 
@@ -36,6 +41,7 @@ def run_experiment(
             )
         ),
         "gini": gini(wealth),
+        "wealth": wealth,
     }
 
 def main():
@@ -43,23 +49,33 @@ def main():
     steps = 100
     runs = 50
     base_seed = 42
+    activations = [
+        "random",
+        "fixed",
+        "simultaneous"
+    ]
 
     for redistribution in (False, True):
-        results = [
-            run_experiment(
-                n=n,
-                steps=steps,
-                seed=base_seed + i,
-                redistribution=redistribution,
-            )
-            for i in range(runs)
-        ]
+        for activation in activations:
+            results = [
+                run_experiment(
+                    n=n,
+                    steps=steps,
+                    seed=base_seed + i,
+                    redistribution=redistribution,
+                    activation=activation,
+                )
+                for i in range(runs)
+            ]
 
-        print(
-            f"Redistribution: {redistribution}, "
-            f"Poor: {mean(r['poor'] for r in results):.2f} ± {pstdev(r['poor'] for r in results):.2f}, "
-            f"Gini: {mean(r['gini'] for r in results):.4f} ± {pstdev(r['gini'] for r in results):.4f}"
-        )
+            poor = [result["poor"] for result in results]
+            gini_values = [result["gini"] for result in results]
+
+            print(
+                f"Redistribution: {redistribution}, Activation: {activation}, "
+                f"Poor: {mean(poor):.2f} ± {pstdev(poor):.2f}, "
+                f"Gini: {mean(gini_values):.4f} ± {pstdev(gini_values):.4f}"
+            )
 
 if __name__ == "__main__":
     main()

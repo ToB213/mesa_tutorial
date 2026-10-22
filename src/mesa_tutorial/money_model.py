@@ -34,6 +34,18 @@ class MoneyAgent(mesa.Agent):
         recipient.wealth += 1
         self.wealth -= 1
 
+    def compute_next_state(self):
+        if self.wealth <= 0:
+            return
+
+        recipient = self.random.choice(self.model.agents)
+
+        self.model.wealth_deltas[self] -= 1
+        self.model.wealth_deltas[recipient] += 1
+
+    def advance(self):
+        self.wealth += self.model.wealth_deltas[self]
+
 
 class MoneyModel(mesa.Model):
     def __init__(
@@ -45,7 +57,7 @@ class MoneyModel(mesa.Model):
     ):
         super().__init__(seed=seed)
 
-        if activation not in ("random", "fixed"):
+        if activation not in ("random", "fixed", "simultaneous"):
             raise ValueError(f"Unknown activation: {activation}")
 
         self.activation = activation
@@ -58,6 +70,10 @@ class MoneyModel(mesa.Model):
             self.agents.shuffle_do("exchange")
         elif self.activation == "fixed":
             self.agents.do("exchange")
+        elif self.activation == "simultaneous":
+            self.wealth_deltas = {agent: 0 for agent in self.agents}
+            self.agents.do("compute_next_state")
+            self.agents.do("advance")
 
         if self.redistribution:
             rich = self.agents.select(
