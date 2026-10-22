@@ -9,6 +9,34 @@ def tax_agent(agent):
     if agent.wealth >= 5:
         agent.wealth -= 1
 
+def run_experiment(
+    n: int,
+    steps: int,
+    seed: int,
+    redistribution: bool,
+):
+    model = MoneyModel(
+        n=n,
+        seed=seed,
+        activation="random",
+        redistribution=redistribution,
+    )
+
+    for _ in range(steps):
+        model.step()
+
+        assert model.agents.agg("wealth", sum) == n
+
+    wealth = model.agents.get("wealth")
+
+    return {
+        "poor": len(
+            model.agents.select(
+                lambda agent: agent.wealth == 0
+            )
+        ),
+        "gini": gini(wealth),
+    }
 
 def main():
     n = 50
@@ -16,72 +44,22 @@ def main():
     runs = 50
     base_seed = 42
 
-    results = {
-        "fixed": [],
-        "random": [],
-    }
-
-    for i in range(runs):
-        for activation in results:
-            model = MoneyModel(
-                seed=base_seed + i,
+    for redistribution in (False, True):
+        results = [
+            run_experiment(
                 n=n,
-                activation=activation,
+                steps=steps,
+                seed=base_seed + i,
+                redistribution=redistribution,
             )
+            for i in range(runs)
+        ]
 
-            # Run the simulation
-            for _ in range(steps):
-                model.step()
-
-                # Wealth conservation
-                assert model.agents.agg("wealth", sum) == n
-
-            # Collect wealth before taxation
-            wealth_before = model.agents.get("wealth")
-
-            # Calculate Gini coefficient
-            results[activation].append(
-                gini(wealth_before)
-            )
-
-            # Count taxpayers
-            taxpayers = model.agents.select(
-                lambda agent: agent.wealth >= 5
-            )
-            tax_count = len(taxpayers)
-
-            # Apply taxation
-            model.agents.do(tax_agent)
-
-            # Collect wealth after taxation
-            wealth_after = model.agents.get("wealth")
-
-            # Verify the collected tax
-            assert (
-                sum(wealth_before) - sum(wealth_after)
-                == tax_count
-            )
-
-            # Collect agent reports
-            reports = model.agents.map("report_status")
-
-            if i == 0:
-                print(f"\n=== Activation: {activation} ===")
-                print(f"Tax collected: {tax_count}")
-
-                for report in reports[:5]:
-                    print(report)
-
-    # Compare activation methods
-    print("\n=== Gini Comparison (Before Tax) ===")
-
-    for activation, gini_values in results.items():
         print(
-            f"Activation: {activation}, "
-            f"Mean Gini: {mean(gini_values):.4f}, "
-            f"Std Gini: {pstdev(gini_values):.4f}"
+            f"Redistribution: {redistribution}, "
+            f"Poor: {mean(r['poor'] for r in results):.2f} ± {pstdev(r['poor'] for r in results):.2f}, "
+            f"Gini: {mean(r['gini'] for r in results):.4f} ± {pstdev(r['gini'] for r in results):.4f}"
         )
-
 
 if __name__ == "__main__":
     main()
